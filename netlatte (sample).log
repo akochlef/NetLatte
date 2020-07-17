@@ -1,0 +1,4 @@
+[NetLatte] 2020-07-17 15:33:52 Latency = 0.248 ms, Samples = 2989
+[NetLatte] 2020-07-17 15:38:52 Latency = 0.245 ms, Samples = 2988
+[NetLatte] 2020-07-17 15:43:52 Latency = 0.252 ms, Samples = 2988
+[NetLatte] 2020-07-17 15:44:18 Network interruption detected (duration= 3.317 s, loss=32 packets)
