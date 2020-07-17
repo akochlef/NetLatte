@@ -23,6 +23,7 @@ __MAX_BLOCK_SIZE_IN_DAYS__ = 14
 __MAX_BLOCK_SIZE__ = round(__MAX_BLOCK_SIZE_IN_DAYS__*24*60*60/__SLEEP_TIME__)
 __SERVER_LISTEN_IP__ = '0.0.0.0'
 __LOG_FILE__ = 'netlatte.log'
+__DELAY_MEASUREMENT_PERIODE__ = 300
 
 def save_log(filename,line):
 	file_object = open(filename, 'a')
@@ -73,13 +74,14 @@ def sender(sock,server_ip,server_port,message,sleep_time,max_block_size):
 			b += 1
 			if(b == max_block_size):
 				b = 0
-		
-		
+			
 def reciever(sock,log_file):
 	previous_ts = time.time()
 	previous_block = 0
 	previous_index = -1
-	
+	delay = 0
+	delay_samples = 0
+	delay_window_start = previous_ts
 	while True:
 		bm, addr = sock.recvfrom(__BUFFER_SIZE__)
 		msg = bm.decode('utf-8')
@@ -88,6 +90,19 @@ def reciever(sock,log_file):
 		msg_block = jm.get('block')
 		msg_index = jm.get('index')
 		ts = time.time()
+		# Delay measurement
+		delay += (ts-msg_ts)/2
+		delay_samples += 1
+		if((ts-delay_window_start)>__DELAY_MEASUREMENT_PERIODE__):
+			td = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+			delay = round(1000000*delay/delay_samples)/1000
+			log = f'[{__ID__}] {td} Latency = {delay} ms, Samples = {delay_samples}'
+			print(log)
+			save_log(log_file,log)
+			delay = 0
+			delay_samples = 0
+			delay_window_start=ts
+		
 		loss = number_of_lost_packets(previous_block,previous_index,msg_block,msg_index)
 		if(loss != 0):
 			td = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -98,6 +113,7 @@ def reciever(sock,log_file):
 		previous_ts = msg_ts
 		previous_block = msg_block
 		previous_index = msg_index
+		
 	
 def client(server_ip,server_port,message_size,sleep_time,max_block_size,log_file):
 	rm = rand_message(message_size)
