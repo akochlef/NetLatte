@@ -3,6 +3,7 @@
 # NetLatte
 # Created by: Anis Kochlef
 # Measures network delays and packet loss
+# 7/20/2020: Duplicate packet detection added.
 
 
 import random
@@ -14,7 +15,7 @@ import sys
 import _thread
 import socket
 
-__VERSION__ = '1.0'
+__VERSION__ = '1.1'
 __ID__ = 'NetLatte'
 __MESSAGE_SIZE__ = 1216
 __BUFFER_SIZE__ = 1600
@@ -67,6 +68,8 @@ def sender(sock,server_ip,server_port,message,sleep_time,max_block_size):
 		jm = json.dumps(dm)
 		bm = bytes(jm,'utf-8')
 		sock.sendto(bm,(server_ip, server_port))
+		# simulate duplicate
+		# sock.sendto(bm,(server_ip, server_port))
 		time.sleep(sleep_time)
 		i += 1
 		if(i == max_block_size):
@@ -104,12 +107,20 @@ def reciever(sock,log_file):
 			delay_window_start=ts
 		
 		loss = number_of_lost_packets(previous_block,previous_index,msg_block,msg_index)
-		if(loss != 0):
+		if(loss > 0):
 			td = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 			duration = round((ts-previous_ts)*1000)/1000
 			log = f'[{__ID__}] {td} Network interruption detected (duration= {duration} s, loss={loss} packets)'
 			print(log)
 			save_log(log_file,log)
+		else:
+			if(loss<0):
+				td = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+				duration = round((ts-previous_ts)*1000)/1000
+				log = f'[{__ID__}] {td} Duplicate packet detected (block= {msg_block}, index={msg_index})'
+				print(log)
+				save_log(log_file,log)
+				
 		previous_ts = msg_ts
 		previous_block = msg_block
 		previous_index = msg_index
